@@ -24,6 +24,7 @@ import soundfile
 import torch
 import torchaudio
 import numpy as np
+import os
 
 from pathlib import Path
 from typing import Tuple
@@ -93,30 +94,38 @@ def load_audio(
     Returns:
         audio (np.ndarray): audio
     """
+    if adfile is None:
+        raise ValueError("Audio file path cannot be None")
+    
+    if not os.path.exists(adfile):
+        raise FileNotFoundError(f"Audio file not found: {adfile}")
 
-    audio, sr = soundfile.read(adfile)
-    if len(audio.shape) > 1:
-        audio = audio[:, 0]
+    try:
+        audio, sr = soundfile.read(adfile)
+        if len(audio.shape) > 1:
+            audio = audio[:, 0]
 
-    if sampling_rate is not None and sr != sampling_rate:
-        audio = soxr.resample(audio, sr, sampling_rate, quality="VHQ")
-        sr = sampling_rate
+        if sampling_rate is not None and sr != sampling_rate:
+            audio = soxr.resample(audio, sr, sampling_rate, quality="VHQ")
+            sr = sampling_rate
 
-    if segment_duration is not None:
-        seg_length = int(sr * segment_duration)
-        audio = random_select_audio_segment(audio, seg_length)
+        if segment_duration is not None:
+            seg_length = int(sr * segment_duration)
+            audio = random_select_audio_segment(audio, seg_length)
 
-    # Audio volume normalize
-    if volume_normalize:
-        audio = audio_volume_normalize(audio)
-    # check the audio length
-    if length is not None:
-        assert abs(audio.shape[0] - length) < 1000
-        if audio.shape[0] > length:
-            audio = audio[:length]
-        else:
-            audio = np.pad(audio, (0, int(length - audio.shape[0])))
-    return audio
+        # Audio volume normalize
+        if volume_normalize:
+            audio = audio_volume_normalize(audio)
+        # check the audio length
+        if length is not None:
+            assert abs(audio.shape[0] - length) < 1000
+            if audio.shape[0] > length:
+                audio = audio[:length]
+            else:
+                audio = np.pad(audio, (0, int(length - audio.shape[0])))
+        return audio
+    except Exception as e:
+        raise RuntimeError(f"Error loading audio: {e}")
 
 
 def random_select_audio_segment(audio: np.ndarray, length: int) -> np.ndarray:

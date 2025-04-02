@@ -1,0 +1,25 @@
+# Model settings
+model_dir = "../../LLM-Models/Spark-TTS-0.5B"
+force_cpu = true
+device = "mps"
+
+# Voice management
+voices_dir = "../../voices"
+
+# TTS settings
+cache_dir = "../../tts_cache"
+save_dir = "../../output"
+segmentation_threshold = 150
+
+# Text processing
+max_chinese_chars = 60
+max_english_chars = 120
+
+# Default voice properties (used only with direct TTS, not with voice profiles)
+gender = "male"
+pitch = "moderate" 
+speed = "moderate"
+emotion = ""  # Use empty string for null/None value
+
+# Demo example
+text = "这是一段用于测试Spark-TTS的短文本。" 

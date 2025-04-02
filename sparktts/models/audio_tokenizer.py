@@ -16,6 +16,7 @@
 
 import torch
 import numpy as np
+import os
 
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -34,8 +35,20 @@ class BiCodecTokenizer:
         """
         Args:
             model_dir: Path to the model directory.
-            device: Device to run the model on (default is GPU if available).
+            device: Device to run the model on (default is CPU if not specified).
         """
+        # Check if on macOS and allow MPS if available
+        if device is None:
+            if torch.backends.mps.is_available():
+                device = torch.device("mps")
+                print("Running on macOS - using MPS for GPU acceleration")
+            else:
+                device = torch.device("cpu")
+                print("MPS device not available - using CPU")
+        elif hasattr(device, 'type') and device.type == 'mps':
+            # Keep mps device if explicitly specified
+            print("Using MPS device for acceleration")
+                
         self.device = device
         self.model_dir = model_dir
         self.config = load_config(f"{model_dir}/config.yaml")
@@ -43,34 +56,43 @@ class BiCodecTokenizer:
 
     def _initialize_model(self):
         """Load and initialize the BiCodec model and Wav2Vec2 feature extractor."""
-        self.model = BiCodec.load_from_checkpoint(f"{self.model_dir}/BiCodec").to(
-            self.device
-        )
+        # Safely load and move models to device
+        bicodec = BiCodec.load_from_checkpoint(f"{self.model_dir}/BiCodec")
+        self.model = bicodec.to(self.device)
+        
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(
             f"{self.model_dir}/wav2vec2-large-xlsr-53"
         )
-        self.feature_extractor = Wav2Vec2Model.from_pretrained(
+        
+        feature_extractor = Wav2Vec2Model.from_pretrained(
             f"{self.model_dir}/wav2vec2-large-xlsr-53"
-        ).to(self.device)
+        )
+        self.feature_extractor = feature_extractor.to(self.device)
         self.feature_extractor.config.output_hidden_states = True
+            
 
     def get_ref_clip(self, wav: np.ndarray) -> np.ndarray:
         """Get reference audio clip for speaker embedding."""
-        ref_segment_length = (
-            int(self.config["sample_rate"] * self.config["ref_segment_duration"])
-            // self.config["latent_hop_length"]
-            * self.config["latent_hop_length"]
-        )
+        # 直接使用整个音频文件，无需截断
         wav_length = len(wav)
-
-        if ref_segment_length > wav_length:
-            # Repeat and truncate to handle insufficient length
-            wav = np.tile(wav, ref_segment_length // wav_length + 1)
-
-        return wav[:ref_segment_length]
+        
+        # 为兼容性考虑，确保音频长度是latent_hop_length的整数倍
+        hop_length = self.config["latent_hop_length"]
+        aligned_length = (wav_length // hop_length) * hop_length
+        
+        # 如果音频太短，则重复填充
+        min_segment_length = int(self.config["sample_rate"] * 1.5)  # 至少1.5秒
+        if wav_length < min_segment_length:
+            wav = np.tile(wav, min_segment_length // wav_length + 1)
+            aligned_length = (len(wav) // hop_length) * hop_length
+        
+        return wav[:aligned_length]
 
     def process_audio(self, wav_path: Path) -> Tuple[np.ndarray, torch.Tensor]:
         """load auido and get reference audio from wav path"""
+        if wav_path is None or not os.path.exists(wav_path):
+            raise ValueError(f"Invalid audio file path: {wav_path}")
+            
         wav = load_audio(
             wav_path,
             sampling_rate=self.config["sample_rate"],

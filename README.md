@@ -1,35 +1,24 @@
-<div align="center">
-    <h1>
-    Spark-TTS
-    </h1>
-    <p>
-    Official PyTorch code for inference of <br>
-    <b><em>Spark-TTS: An Efficient LLM-Based Text-to-Speech Model with Single-Stream Decoupled Speech Tokens</em></b>
-    </p>
-    <p>
-    <img src="src/logo/SparkTTS.jpg" alt="Spark-TTS Logo" style="width: 200px; height: 200px;">
-    </p>
-        <p>
-        <img src="src/logo/HKUST.jpg" alt="Institution 1" style="width: 200px; height: 60px;">
-        <img src="src/logo/mobvoi.jpg" alt="Institution 2" style="width: 200px; height: 60px;">
-        <img src="src/logo/SJU.jpg" alt="Institution 3" style="width: 200px; height: 60px;">
-    </p>
-    <p>
-        <img src="src/logo/NTU.jpg" alt="Institution 4" style="width: 200px; height: 60px;">
-        <img src="src/logo/NPU.jpg" alt="Institution 5" style="width: 200px; height: 60px;">
-        <img src="src/logo/SparkAudio2.jpg" alt="Institution 6" style="width: 200px; height: 60px;">
-    </p>
-    <p>
-    </p>
-    <a href="https://arxiv.org/pdf/2503.01710"><img src="https://img.shields.io/badge/Paper-ArXiv-red" alt="paper"></a>
-    <a href="https://sparkaudio.github.io/spark-tts/"><img src="https://img.shields.io/badge/Demo-Page-lightgrey" alt="version"></a>
-    <a href="https://huggingface.co/SparkAudio/Spark-TTS-0.5B"><img src="https://img.shields.io/badge/Hugging%20Face-Model%20Page-yellow" alt="Hugging Face"></a>
-    <a href="https://github.com/SparkAudio/Spark-TTS"><img src="https://img.shields.io/badge/Platform-linux-lightgrey" alt="version"></a>
-    <a href="https://github.com/SparkAudio/Spark-TTS"><img src="https://img.shields.io/badge/Python-3.12+-orange" alt="version"></a>
-    <a href="https://github.com/SparkAudio/Spark-TTS"><img src="https://img.shields.io/badge/PyTorch-2.5+-brightgreen" alt="python"></a>
-    <a href="https://github.com/SparkAudio/Spark-TTS"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="mit"></a>
-</div>
+> This repo fored from [SparkAudio/Spark-TTS](https://github.com/SparkAudio/Spark-TTS/).
 
+
+**添加的功能:**
+
+- 改进命令行交互，方便使用。并将声音特征提取和音频生成拆分开可独立使用。
+
+- **声音特征保存**：从参考音频中提取说话人全局特征tokens，保存至本地文件。后续生成时可直接加载保存的特征tokens应用于TTS，无需重新从音频中提取。
+
+- **文本拆分处理**：将输入的长文本，使用分段算法将文本按句子结束标点、暂停标点和字符/单词数量限制拆分，逐段生成音频后合并。利用缓存机制支持中断后继续生成。
+
+- **音频段缓存**：使用哈希算法基于文本内容和TTS参数（模型、语音特征、性别、音调、语速等）生成缓存键，存储已生成的音频段。再次处理相同文本和参数时直接从缓存读取，避免重复推理。
+
+- <del>**语音参数调节**：提供gender（male/female）、pitch（very_low到very_high）、speed（very_low到very_high）和emotion参数设置，通过模型prompt控制输出音频特性。</del> （无效）
+
+**命令行调用方式**
+
+`python . --help`
+
+
+---
 
 ## Spark-TTS 🔥
 
@@ -45,22 +34,6 @@ Spark-TTS is an advanced text-to-speech system that uses the power of large lang
 - **Controllable Speech Generation**: Supports creating virtual speakers by adjusting parameters such as gender, pitch, and speaking rate.
 
 ---
-
-<table align="center">
-  <tr>
-    <td align="center"><b>Inference Overview of Voice Cloning</b><br><img src="src/figures/infer_voice_cloning.png" width="80%" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Inference Overview of Controlled Generation</b><br><img src="src/figures/infer_control.png" width="80%" /></td>
-  </tr>
-</table>
-
-
-## 🚀 News
-
-- **[2025-03-04]** Our paper on this project has been published! You can read it here: [Spark-TTS](https://arxiv.org/pdf/2503.01710). 
-
-- **[2025-03-12]** Nvidia Triton Inference Serving is now supported. See the Runtime section below for more details.
 
 
 ## Install
@@ -125,23 +98,6 @@ python -m cli.inference \
     --prompt_text "transcript of the prompt audio" \
     --prompt_speech_path "path/to/prompt_audio"
 ```
-
-**Web UI Usage**
-
-You can start the UI interface by running `python webui.py --device 0`, which allows you to perform Voice Cloning and Voice Creation. Voice Cloning supports uploading reference audio or directly recording the audio.
-
-
-| **Voice Cloning** | **Voice Creation** |
-|:-------------------:|:-------------------:|
-| ![Image 1](src/figures/gradio_TTS.png) | ![Image 2](src/figures/gradio_control.png) |
-
-
-**Optional Methods**
-
-For additional CLI and Web UI methods, including alternative implementations and extended functionalities, you can refer to:
-
-- [CLI and UI by AcTePuKc](https://github.com/SparkAudio/Spark-TTS/issues/10)
-
 
 ## Runtime
 
